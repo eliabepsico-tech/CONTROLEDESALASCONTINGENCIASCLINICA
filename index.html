@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Contingências — Salas</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --g50:#f2faf5;--g100:#d6f0e0;--g200:#a8daba;--g400:#4aaa72;--g600:#2d7a4f;--g800:#1a4d30;
+  --bg:#f8faf8;--surface:#fff;--border:#e4ede7;--border2:#c8dcd0;
+  --text:#1a2e22;--muted:#6b8a74;--muted2:#a8c0b0;
+  --red:#e05c4a;--red-bg:#fef4f2;--red-bd:#f5c8c0;
+  --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+  --header-h:60px;--nav-h:48px;--top:108px;
+}
+html,body{height:100%;overscroll-behavior:none}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;min-height:100vh}
+.header{background:var(--g800);color:#fff;padding:0 16px;display:flex;align-items:center;justify-content:space-between;height:var(--header-h);position:sticky;top:0;z-index:50;gap:12px}
+.header-brand{display:flex;align-items:center;gap:10px;min-width:0}
+.header-logo{width:40px;height:40px;flex-shrink:0}
+.header h1{font-size:.95rem;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.header p{font-family:var(--mono);font-size:.55rem;opacity:.45;letter-spacing:.06em;text-transform:uppercase;color:#fff}
+.clock{font-family:var(--mono);font-size:1rem;font-weight:500;color:#fff;opacity:.8;letter-spacing:.06em;flex-shrink:0}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:#4aaa72;flex-shrink:0;transition:background .3s}
+.sync-dot.off{background:#e05c4a;animation:pulse 1.8s ease-in-out infinite}
+.sync-dot.loading{background:#f0a840;animation:pulse 1s ease-in-out infinite}
+.nav{display:flex;background:var(--surface);border-bottom:1.5px solid var(--border);position:sticky;top:var(--header-h);z-index:40}
+.nav-btn{flex:1;padding:14px 8px;font-size:.72rem;font-weight:500;letter-spacing:.02em;color:var(--muted);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1.5px;transition:all .15s;font-family:var(--font);text-align:center}
+.nav-btn.active{color:var(--g600);border-bottom-color:var(--g600);font-weight:600}
+.page{display:none;animation:fi .18s ease}
+.page.active{display:block}
+@keyframes fi{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+.loading-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:200px;gap:12px;color:var(--muted);font-size:.85rem}
+.spinner{width:28px;height:28px;border:2.5px solid var(--g100);border-top-color:var(--g600);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.fb-banner{display:none;background:var(--red-bg);border-bottom:1px solid var(--red-bd);padding:8px 16px;text-align:center;font-size:.75rem;color:var(--red);font-weight:500}
+.fb-banner.show{display:block}
+/* DISPONIBILIDADE */
+.avail-wrap{padding:16px 14px 80px}
+.day-tabs{display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.day-tabs::-webkit-scrollbar{display:none}
+.day-tab{padding:8px 16px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface);font-family:var(--mono);font-size:.65rem;font-weight:500;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;color:var(--muted);transition:all .12s;white-space:nowrap;min-height:36px}
+.day-tab.active{background:var(--g600);color:#fff;border-color:var(--g600)}
+.day-tab.hoje{border-color:var(--g400);color:var(--g600)}
+.day-tab.hoje.active{background:var(--g600);color:#fff}
+.avail-grid{display:flex;flex-direction:column;gap:8px}
+.prof-row{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;overflow:hidden}
+.prof-row-header{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--g50)}
+.prof-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:600;flex-shrink:0;color:#fff}
+.prof-row-name{font-size:.9rem;font-weight:600}
+.prof-row-sub{font-family:var(--mono);font-size:.6rem;margin-left:auto;background:var(--g50);padding:3px 9px;border-radius:10px;color:var(--g600);white-space:nowrap}
+.hora-chips{display:flex;flex-wrap:wrap;gap:5px;padding:10px 14px}
+.hora-chip{font-family:var(--mono);font-size:.62rem;font-weight:500;padding:5px 10px;border-radius:6px;letter-spacing:.04em}
+.hora-chip.livre{background:var(--g50);color:var(--g600);border:1px solid var(--g100)}
+.hora-chip.ocupado{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd);text-decoration:line-through;opacity:.6}
+/* ATENDIMENTO */
+.attend-wrap{display:flex;flex-direction:column}
+.sala-section{background:var(--bg)}
+.sala-col-header{background:var(--surface);border-bottom:1.5px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:var(--top);z-index:30}
+.sala-badge{background:var(--g800);color:#fff;font-size:.65rem;font-weight:600;padding:4px 12px;border-radius:20px;letter-spacing:.04em;font-family:var(--mono)}
+.sala-live{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:.62rem;color:var(--muted)}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--g400);transition:background .3s;flex-shrink:0}
+.live-dot.red{background:var(--red);animation:pulse 1.8s ease-in-out infinite}
+.day-strip{display:flex;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+.day-strip::-webkit-scrollbar{display:none}
+.day-strip-btn{flex:1;min-width:44px;padding:10px 4px;text-align:center;font-size:.65rem;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);cursor:pointer;border-bottom:2.5px solid transparent;border-top:none;border-left:none;border-right:none;background:none;font-family:var(--mono);transition:all .12s}
+.day-strip-btn.active{color:var(--g600);border-bottom-color:var(--g600);font-weight:600}
+.day-strip-btn.hoje{color:var(--g600)}
+.grade{padding:10px 12px 24px}
+.sala-divider{height:8px;background:var(--border);border-top:1px solid var(--border2)}
+.slot-row{display:flex;align-items:stretch;gap:8px;margin-bottom:5px}
+.hora-lbl{font-family:var(--mono);font-size:.6rem;color:var(--muted2);width:28px;flex-shrink:0;padding-top:12px;text-align:right}
+.slot-row.agora .hora-lbl{color:var(--g600);font-weight:600}
+.slot{flex:1;background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:11px 13px;min-height:52px;position:relative;transition:all .15s;cursor:pointer;user-select:none;-webkit-user-select:none}
+.slot.ocupado{background:var(--red-bg);border-color:var(--red-bd);cursor:default}
+.slot.marcavel{border-style:dashed;border-color:var(--border2)}
+.slot.marcavel:active{border-style:solid;border-color:var(--g400);background:var(--g50);transform:scale(.99)}
+.hint-static{font-family:var(--mono);font-size:.58rem;color:var(--muted2);letter-spacing:.03em}
+.ocupado-row{display:flex;align-items:center;gap:9px}
+.pulse-dot{width:7px;height:7px;border-radius:50%;background:var(--red);flex-shrink:0;animation:pulse 1.8s ease-in-out infinite}
+.ocupado-nome{font-size:.92rem;font-weight:600}
+.ocupado-sub{font-family:var(--mono);font-size:.55rem;text-transform:uppercase;letter-spacing:.07em;color:var(--red);opacity:.7;margin-top:2px}
+.btn-lib{margin-top:8px;background:none;border:1px solid var(--red-bd);border-radius:6px;color:var(--red);font-family:var(--mono);font-size:.58rem;letter-spacing:.05em;text-transform:uppercase;padding:5px 10px;cursor:pointer;display:inline-block;min-height:30px}
+.btn-lib:active{background:var(--red);color:#fff;border-color:var(--red)}
+/* CONFIGURAÇÕES */
+.settings-wrap{padding:16px 14px 80px}
+.settings-section{margin-bottom:24px}
+.settings-section h3{font-size:.68rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.prof-list{display:flex;flex-direction:column;gap:6px}
+.prof-item{background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.prof-item-dot{width:13px;height:13px;border-radius:50%;flex-shrink:0;cursor:pointer}
+.prof-item-name{font-size:.88rem;font-weight:500;flex:1;min-width:80px}
+.prof-item-name input{font-family:var(--font);font-size:.88rem;font-weight:500;border:none;background:transparent;color:var(--text);width:100%;outline:none;border-bottom:1px dashed var(--border2);padding-bottom:2px}
+.prof-item-actions{display:flex;gap:6px}
+.btn-icon{background:none;border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:.75rem;color:var(--muted);font-family:var(--mono);min-height:34px;min-width:34px}
+.btn-add{display:flex;align-items:center;gap:8px;padding:13px 16px;background:var(--surface);border:1.5px dashed var(--border2);border-radius:12px;cursor:pointer;font-family:var(--font);font-size:.85rem;font-weight:500;color:var(--muted);width:100%;min-height:48px}
+.btn-add:active{border-color:var(--g400);color:var(--g600)}
+.color-picker-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;width:100%}
+.color-swatch{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid transparent;min-width:26px;min-height:26px}
+.color-swatch.selected{border-color:var(--text)}
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(20,40,28,.55);z-index:100;align-items:flex-end;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:22px 22px 0 0;padding:20px 18px 32px;width:100%;max-width:480px;animation:su .22s ease;border:1.5px solid var(--border);border-bottom:none;max-height:85vh;overflow-y:auto}
+@keyframes su{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+.drag-bar{width:34px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 18px}
+.modal h3{font-size:.95rem;font-weight:600;margin-bottom:12px}
+.modal-ctx{background:var(--g50);border:1px solid var(--g100);border-radius:10px;padding:10px 14px;margin-bottom:14px}
+.ctx-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:.82rem;border-bottom:1px solid var(--g100)}
+.ctx-row:last-child{border:none}
+.ctx-row .lbl{color:var(--muted)}
+.ctx-row .val{font-weight:600;font-family:var(--mono);font-size:.75rem;color:var(--g800)}
+.modal-q{font-size:.8rem;color:var(--muted);margin-bottom:10px}
+.prof-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.prof-btn{padding:10px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);font-family:var(--mono);font-size:.72rem;font-weight:500;cursor:pointer;color:var(--text);min-height:42px}
+.prof-btn.sel{color:#fff;border-color:transparent}
+.modal-acts{display:flex;gap:8px}
+.btn-cancel{flex:1;padding:13px;border:1.5px solid var(--border);border-radius:12px;background:transparent;font-family:var(--font);font-weight:500;font-size:.85rem;cursor:pointer;color:var(--muted);min-height:48px}
+.btn-ok{flex:2;padding:13px;border:none;border-radius:12px;background:var(--g600);color:#fff;font-family:var(--font);font-weight:600;font-size:.85rem;cursor:pointer;opacity:.3;pointer-events:none;transition:opacity .12s;min-height:48px}
+.btn-ok.on{opacity:1;pointer-events:auto}
+.btn-ok.on:active{background:var(--g800)}
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--g800);color:#fff;padding:11px 22px;border-radius:30px;font-size:.8rem;font-weight:500;opacity:0;transition:all .25s;z-index:200;white-space:nowrap;pointer-events:none;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.edit-inline{display:none}
+.editing .edit-inline{display:block}
+.editing .show-name{display:none}
+.grade-slot-row{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
+.grade-slot-row:last-child{border:none}
+.grade-slot-hora{font-family:var(--mono);font-size:.65rem;font-weight:500;color:var(--muted);width:36px;flex-shrink:0;padding-top:5px}
+.grade-slot-profs{display:flex;flex-wrap:wrap;gap:5px;flex:1}
+.grade-prof-tag{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:.65rem;font-weight:500;padding:4px 9px;border-radius:6px}
+.grade-prof-tag button{background:none;border:none;cursor:pointer;font-size:.7rem;opacity:.5;padding:0;margin-left:2px;min-width:18px;min-height:18px}
+.grade-add-btn{background:none;border:1.5px dashed var(--border2);border-radius:6px;color:var(--muted);font-family:var(--mono);font-size:.65rem;padding:4px 9px;cursor:pointer;min-height:28px}
+.grade-add-btn:active{border-color:var(--g400);color:var(--g600)}
+.grade-section-box{background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:4px 14px}
+</style>
+</head>
+<body>
+
+<div class="fb-banner" id="fbBanner">Sem conexão — tentando reconectar...</div>
+
+<div class="header">
+  <div class="header-brand">
+    <div class="header-logo">
+      <svg width="40" height="40" viewBox="0 0 100 100" fill="none">
+        <path d="M50 18 C36 18 24 28 22 40 C20 50 24 58 28 64 C32 70 34 76 36 80 L50 80 Z" fill="#a8d8b0" opacity="0.85"/>
+        <path d="M50 18 C56 18 62 20 66 24 C72 30 76 36 76 44 C76 50 74 54 72 58 C68 64 64 70 64 80 L50 80 Z" fill="#7ec8c8" opacity="0.85"/>
+        <path d="M55 26 C60 28 65 32 67 38" stroke="#5aacac" stroke-width="2" stroke-linecap="round" fill="none"/>
+        <path d="M58 36 C62 38 66 44 65 50" stroke="#5aacac" stroke-width="2" stroke-linecap="round" fill="none"/>
+        <path d="M54 48 C58 50 64 54 62 62" stroke="#5aacac" stroke-width="2" stroke-linecap="round" fill="none"/>
+        <circle cx="36" cy="36" r="3.5" fill="#e8604c" opacity="0.9"/>
+        <circle cx="42" cy="30" r="2.5" fill="#7dba6e" opacity="0.9"/>
+        <circle cx="30" cy="44" r="2.5" fill="#f0a840" opacity="0.9"/>
+        <circle cx="38" cy="52" r="3" fill="#b07cc6" opacity="0.9"/>
+        <path d="M32 86 C26 82 20 84 18 88 C22 90 28 90 32 86Z" fill="#b8d89a" opacity="0.9"/>
+        <path d="M68 86 C74 82 80 84 82 88 C78 90 72 90 68 86Z" fill="#b8d89a" opacity="0.9"/>
+        <line x1="50" y1="80" x2="50" y2="88" stroke="#8ab870" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div>
+      <h1>Contingências</h1>
+      <p>Salas · Nutrição e Psicologia</p>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <div class="sync-dot loading" id="syncDot"></div>
+    <div class="clock" id="clock">00:00</div>
+  </div>
+</div>
+
+<div class="nav">
+  <button class="nav-btn active" onclick="goPage('disponibilidade',this)">Disponível</button>
+  <button class="nav-btn"        onclick="goPage('atendimento',this)">Atendimento</button>
+  <button class="nav-btn"        onclick="goPage('configuracoes',this)">Config</button>
+</div>
+
+<div id="page-disponibilidade" class="page active">
+  <div class="avail-wrap">
+    <div class="day-tabs" id="availDayTabs"></div>
+    <div class="avail-grid" id="availGrid"><div class="loading-screen"><div class="spinner"></div>Conectando...</div></div>
+  </div>
+</div>
+
+<div id="page-atendimento" class="page">
+  <div class="attend-wrap">
+    <div class="sala-section">
+      <div class="sala-col-header">
+        <div class="sala-badge">Sala 01</div>
+        <div class="sala-live"><div class="live-dot" id="ldot1"></div><span id="ltxt1">Livre</span></div>
+      </div>
+      <div class="day-strip" id="strip1"></div>
+      <div class="grade" id="grade1"></div>
+    </div>
+    <div class="sala-divider"></div>
+    <div class="sala-section">
+      <div class="sala-col-header">
+        <div class="sala-badge">Sala 03</div>
+        <div class="sala-live"><div class="live-dot" id="ldot2"></div><span id="ltxt2">Livre</span></div>
+      </div>
+      <div class="day-strip" id="strip2"></div>
+      <div class="grade" id="grade2"></div>
+    </div>
+  </div>
+</div>
+
+<div id="page-configuracoes" class="page">
+  <div class="settings-wrap">
+    <div class="settings-section">
+      <h3>Profissionais</h3>
+      <div class="prof-list" id="profList"></div>
+      <button class="btn-add" style="margin-top:8px" onclick="addProf()">+ Adicionar profissional</button>
+    </div>
+    <div class="settings-section">
+      <h3>Editar Grade de Disponibilidade</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <select id="gradeSelectSala" onchange="renderGradeEditor()" style="flex:1;min-width:100px;padding:10px;border:1.5px solid var(--border);border-radius:10px;font-family:var(--font);font-size:.85rem;background:var(--surface);color:var(--text);min-height:44px">
+          <option value="1">Sala 01</option>
+          <option value="2">Sala 03</option>
+        </select>
+        <select id="gradeSelectDia" onchange="renderGradeEditor()" style="flex:1;min-width:100px;padding:10px;border:1.5px solid var(--border);border-radius:10px;font-family:var(--font);font-size:.85rem;background:var(--surface);color:var(--text);min-height:44px">
+          <option value="SEG">Segunda</option><option value="TER">Terça</option>
+          <option value="QUA">Quarta</option><option value="QUI">Quinta</option>
+          <option value="SEX">Sexta</option><option value="SAB">Sábado</option>
+        </select>
+      </div>
+      <div id="gradeEditor"></div>
+    </div>
+    <div class="settings-section">
+      <h3>Dados</h3>
+      <button class="btn-add" onclick="limparAtendimentos()" style="color:var(--red);border-color:var(--red-bd)">🗑 Limpar todos os atendimentos marcados</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="drag-bar"></div>
+    <h3>Quem está atendendo?</h3>
+    <div class="modal-ctx">
+      <div class="ctx-row"><span class="lbl">Sala</span><span class="val" id="m-sala">—</span></div>
+      <div class="ctx-row"><span class="lbl">Dia</span><span class="val" id="m-dia">—</span></div>
+      <div class="ctx-row"><span class="lbl">Horário</span><span class="val" id="m-hora">—</span></div>
+    </div>
+    <p class="modal-q">Selecione o profissional:</p>
+    <div class="prof-grid" id="profModalGrid"></div>
+    <div class="modal-acts">
+      <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-ok" id="btnOk" onclick="confirmarAt()">Marcar em atendimento</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey:"AIzaSyBsTGm42d81XzUJ_DPAiOKs3XdtJ1zU3ws",
+  authDomain:"contingenciasclinica-1f497.firebaseapp.com",
+  databaseURL:"https://contingenciasclinica-1f497-default-rtdb.firebaseio.com",
+  projectId:"contingenciasclinica-1f497",
+  storageBucket:"contingenciasclinica-1f497.firebasestorage.app",
+  messagingSenderId:"1987888897",
+  appId:"1:1987888897:web:396b766a0b2c5191f9fd00"
+});
+const db = firebase.database();
+
+const DIAS=['SEG','TER','QUA','QUI','SEX','SAB'];
+const DLBL={SEG:'Seg',TER:'Ter',QUA:'Qua',QUI:'Qui',SEX:'Sex',SAB:'Sáb'};
+const HORAS=['07H','08H','09H','10H','11H','12H','13H','14H','15H','16H','17H','18H','19H','20H','21H','22H'];
+const PALETTE=['#c0392b','#1a6b8a','#7a5c1e','#5b3a8a','#1e6b4a','#8a2d6b','#c07a1a','#2d6b8a','#6b2d2d','#2d8a5b','#6b6b1a','#3a1a8a'];
+
+const DEFAULT_PROFS=[
+  {id:'FER',nome:'FER',cor:'#c0392b'},{id:'ALEX',nome:'ALEX',cor:'#1a6b8a'},
+  {id:'OSNI',nome:'OSNI',cor:'#7a5c1e'},{id:'ELIABE',nome:'ELIABE',cor:'#5b3a8a'},
+  {id:'DANIEL',nome:'DANIEL',cor:'#1e6b4a'},{id:'PAOLA',nome:'PAOLA',cor:'#8a2d6b'},
+  {id:'PAMELA',nome:'PAMELA',cor:'#c07a1a'},{id:'RAFA',nome:'RAFA',cor:'#2d6b8a'},
+  {id:'PÂMELA',nome:'PÂMELA',cor:'#c07a1a'},
+];
+const DEFAULT_GRADE={
+  1:{
+    '07H':{SEG:['FER'],TER:['FER'],QUA:['FER'],QUI:['ALEX','FER'],SEX:['OSNI'],SAB:['ELIABE','PAOLA','DANIEL','FER']},
+    '08H':{SEG:['FER'],TER:['FER'],QUA:['DANIEL','FER'],QUI:['ALEX','FER'],SEX:['OSNI'],SAB:['ELIABE','PAOLA','DANIEL','FER']},
+    '09H':{SEG:['FER'],TER:['FER'],QUA:['DANIEL','FER'],QUI:['ALEX','FER'],SEX:['OSNI'],SAB:['FER','DANIEL','ELIABE']},
+    '10H':{SEG:['FER'],TER:['FER'],QUA:['DANIEL','FER'],QUI:['ALEX','FER'],SEX:['OSNI'],SAB:['PAOLA','DANIEL','FER','ELIABE']},
+    '11H':{SEG:['FER'],TER:['FER'],QUA:['DANIEL','FER'],QUI:['ALEX','FER'],SEX:['OSNI'],SAB:['PAOLA','DANIEL','FER','ELIABE']},
+    '12H':{SEG:['FER'],TER:[],QUA:['DANIEL','FER'],QUI:['ALEX','FER'],SEX:[],SAB:[]},
+    '13H':{SEG:['FER'],TER:[],QUA:['OSNI'],QUI:['ALEX','OSNI','FER'],SEX:['FER'],SAB:['ELIABE','DANIEL']},
+    '14H':{SEG:['DANIEL'],TER:[],QUA:['OSNI'],QUI:['OSNI'],SEX:['FER'],SAB:['ELIABE','DANIEL']},
+    '15H':{SEG:['FER'],TER:['FER'],QUA:['OSNI'],QUI:['OSNI'],SEX:['FER'],SAB:['ELIABE','DANIEL']},
+    '16H':{SEG:['FER'],TER:['FER'],QUA:['OSNI','FER'],QUI:['OSNI','FER'],SEX:['FER'],SAB:['ELIABE','DANIEL']},
+    '17H':{SEG:['FER'],TER:['FER'],QUA:['FER'],QUI:['ALEX'],SEX:['FER'],SAB:['ELIABE','DANIEL']},
+    '18H':{SEG:['FER'],TER:['FER'],QUA:['FER'],QUI:['ALEX','FER'],SEX:['ALEX','FER'],SAB:['ALEX']},
+    '19H':{SEG:['ELIABE','FER'],TER:['ELIABE','FER'],QUA:['FER'],QUI:['ALEX'],SEX:['ALEX','ELIABE','FER'],SAB:['ALEX']},
+    '20H':{SEG:['ELIABE','FER'],TER:['ELIABE','FER'],QUA:['ELIABE'],QUI:[],SEX:['ALEX'],SAB:['ALEX']},
+    '21H':{SEG:['ELIABE'],TER:['ELIABE'],QUA:['ELIABE'],QUI:['ALEX'],SEX:['ALEX'],SAB:['ALEX']},
+    '22H':{SEG:['ELIABE'],TER:['ELIABE'],QUA:['ELIABE'],QUI:['ALEX'],SEX:[],SAB:['ALEX']},
+  },
+  2:{
+    '07H':{SEG:['PAMELA','FER'],TER:['FER'],QUA:['FER'],QUI:['FER'],SEX:['FER'],SAB:['DANIEL','FER']},
+    '08H':{SEG:['PAMELA','FER'],TER:['FER'],QUA:['FER','DANIEL'],QUI:['FER'],SEX:['FER'],SAB:['RAFA','DANIEL','FER']},
+    '09H':{SEG:['PAMELA','FER'],TER:['RAFA','FER'],QUA:['RAFA','FER','DANIEL'],QUI:['FER'],SEX:['FER'],SAB:['RAFA','PAOLA','DANIEL','FER']},
+    '10H':{SEG:['PAMELA','FER'],TER:['RAFA','FER'],QUA:['FER','DANIEL'],QUI:['FER'],SEX:['FER'],SAB:['RAFA','PAOLA','DANIEL','FER']},
+    '11H':{SEG:['PAMELA','FER'],TER:['FER'],QUA:['FER','DANIEL'],QUI:['FER'],SEX:['FER'],SAB:['RAFA','PAOLA','DANIEL','FER']},
+    '12H':{SEG:['PAMELA','FER'],TER:[],QUA:['FER','DANIEL'],QUI:['FER'],SEX:['FER'],SAB:['DANIEL','FER']},
+    '13H':{SEG:['FER'],TER:[],QUA:['FER'],QUI:['FER'],SEX:['RAFA'],SAB:['DANIEL']},
+    '14H':{SEG:['FER'],TER:[],QUA:['FER'],QUI:['FER'],SEX:['RAFA'],SAB:['DANIEL']},
+    '15H':{SEG:['FER'],TER:['FER'],QUA:['RAFA','FER'],QUI:['FER'],SEX:['RAFA'],SAB:['DANIEL']},
+    '16H':{SEG:['FER'],TER:['FER'],QUA:['RAFA','FER'],QUI:['OSNI','FER'],SEX:['RAFA'],SAB:['DANIEL']},
+    '17H':{SEG:['FER'],TER:['FER'],QUA:['FER'],QUI:['FER'],SEX:['RAFA','FER'],SAB:['DANIEL']},
+    '18H':{SEG:['FER'],TER:['FER'],QUA:['FER'],QUI:['ALEX'],SEX:['PÂMELA','FER'],SAB:[]},
+    '19H':{SEG:['FER'],TER:['FER'],QUA:['PÂMELA'],QUI:['PAMELA','FER'],SEX:['FER'],SAB:[]},
+    '20H':{SEG:['FER'],TER:['FER'],QUA:['PAMELA','FER'],QUI:['PAMELA','FER'],SEX:['ELIABE'],SAB:[]},
+    '21H':{SEG:[],TER:[],QUA:['PÂMELA'],QUI:['PAMELA'],SEX:['ELIABE'],SAB:[]},
+    '22H':{SEG:[],TER:[],QUA:[],QUI:[],SEX:['ELIABE'],SAB:[]},
+  }
+};
+
+let STATE={profissionais:JSON.parse(JSON.stringify(DEFAULT_PROFS)),grade:JSON.parse(JSON.stringify(DEFAULT_GRADE))};
+let ATEND={};
+let fbReady=false;
+
+// Firebase sync
+db.ref('atendimentos').on('value',snap=>{
+  ATEND=snap.val()||{};
+  setSyncStatus('');
+  if(!fbReady){fbReady=true;renderAvail();}
+  else reRenderAll();
+},()=>setSyncStatus('off'));
+
+db.ref('.info/connected').on('value',snap=>setSyncStatus(snap.val()?'':'off'));
+
+function setSyncStatus(s){
+  document.getElementById('syncDot').className='sync-dot '+s;
+  document.getElementById('fbBanner').classList.toggle('show',s==='off');
+}
+function getAt(sid,dia,h){return ATEND?.[sid]?.[dia]?.[h]||null;}
+function setAt(sid,dia,h,p){db.ref('atendimentos/'+sid+'/'+dia+'/'+h).set(p);}
+function delAt(sid,dia,h){db.ref('atendimentos/'+sid+'/'+dia+'/'+h).remove();}
+
+function reRenderAll(){
+  if(document.getElementById('page-atendimento').classList.contains('active'))renderAttend();
+  if(document.getElementById('page-disponibilidade').classList.contains('active'))renderAvailGrid();
+  updateLiveStatus();
+}
+
+function getProf(id){return STATE.profissionais.find(p=>p.id===id);}
+function profCor(id){return getProf(id)?.cor||'#888';}
+function lighten(h){const m={'#c0392b':'#fdf1ef','#1a6b8a':'#eff6fa','#7a5c1e':'#faf5eb','#5b3a8a':'#f5f0fb','#1e6b4a':'#eff7f3','#8a2d6b':'#faf0f6','#c07a1a':'#faf5eb','#2d6b8a':'#eff6fa','#6b2d2d':'#fdf1ef','#2d8a5b':'#f0f7f3','#6b6b1a':'#faf5e0','#3a1a8a':'#f0eefb'};return m[h]||'#f5f5f5';}
+function borderOf(h){const m={'#c0392b':'#e8b4ad','#1a6b8a':'#aacfdd','#7a5c1e':'#d4be8a','#5b3a8a':'#c4aae0','#1e6b4a':'#aad4bc','#8a2d6b':'#dfaacc','#c07a1a':'#dfc08a','#2d6b8a':'#aacfdd','#6b2d2d':'#e8b4ad','#2d8a5b':'#aad4bc','#6b6b1a':'#d4d48a','#3a1a8a':'#aaa0e0'};return m[h]||'#ddd';}
+function getDiaSemana(){const m=[null,'SEG','TER','QUA','QUI','SEX','SAB'];return m[new Date().getDay()]||'SEG';}
+
+function goPage(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='disponibilidade')renderAvail();
+  if(id==='atendimento')renderAttend();
+  if(id==='configuracoes'){renderSettings();renderGradeEditor();}
+}
+
+// ABA 1
+let availDia=getDiaSemana();
+function renderAvail(){renderAvailTabs();renderAvailGrid();}
+function renderAvailTabs(){
+  const hoje=getDiaSemana(),el=document.getElementById('availDayTabs');
+  el.innerHTML='';
+  DIAS.forEach(d=>{
+    const b=document.createElement('button');
+    b.className='day-tab'+(d===hoje?' hoje':'')+(d===availDia?' active':'');
+    b.textContent=DLBL[d];
+    b.onclick=()=>{availDia=d;renderAvailTabs();renderAvailGrid();};
+    el.appendChild(b);
+  });
+}
+function renderAvailGrid(){
+  const el=document.getElementById('availGrid');
+  const dMap={},oMap={};
+  [1,2].forEach(sid=>{
+    HORAS.forEach(h=>{
+      (STATE.grade[sid][h][availDia]||[]).forEach(pid=>{
+        if(!dMap[pid])dMap[pid]=new Set();
+        dMap[pid].add(h);
+        if(getAt(sid,availDia,h)===pid){if(!oMap[pid])oMap[pid]=new Set();oMap[pid].add(h);}
+      });
+    });
+  });
+  let html='';
+  STATE.profissionais.forEach(prof=>{
+    const hD=dMap[prof.id];
+    if(!hD||hD.size===0)return;
+    const chips=HORAS.filter(h=>hD.has(h)).map(h=>`<span class="hora-chip ${oMap[prof.id]?.has(h)?'ocupado':'livre'}">${h}</span>`).join('');
+    html+=`<div class="prof-row"><div class="prof-row-header"><div class="prof-avatar" style="background:${prof.cor}">${prof.nome.slice(0,2)}</div><div class="prof-row-name">${prof.nome}</div><div class="prof-row-sub">${hD.size}h disponível</div></div><div class="hora-chips">${chips}</div></div>`;
+  });
+  if(!html)html='<div style="color:var(--muted);font-size:.85rem;padding:24px;text-align:center">Nenhuma disponibilidade para este dia.</div>';
+  el.innerHTML=html;
+}
+
+// ABA 2
+const atDia={1:getDiaSemana(),2:getDiaSemana()};
+function renderAttend(){[1,2].forEach(sid=>{renderStrip(sid);renderGrade(sid);});updateLiveStatus();}
+function renderStrip(sid){
+  const hoje=getDiaSemana(),el=document.getElementById('strip'+sid);
+  el.innerHTML='';
+  DIAS.forEach(d=>{
+    const b=document.createElement('button');
+    b.className='day-strip-btn'+(d===hoje?' hoje':'')+(d===atDia[sid]?' active':'');
+    b.textContent=DLBL[d];
+    b.onclick=()=>{atDia[sid]=d;renderStrip(sid);renderGrade(sid);};
+    el.appendChild(b);
+  });
+}
+function renderGrade(sid){
+  const dia=atDia[sid],hoje=getDiaSemana(),el=document.getElementById('grade'+sid);
+  let html='';
+  HORAS.forEach(h=>{
+    const conf=getAt(sid,dia,h),agora=(dia===hoje)&&(h.replace('H','')==new Date().getHours());
+    let cls='slot',body='';
+    if(conf){
+      cls+=' ocupado';
+      const c=profCor(conf);
+      body=`<div class="ocupado-row"><div class="pulse-dot"></div><div><div class="ocupado-nome" style="color:${c}">${conf}</div><div class="ocupado-sub">Em atendimento</div></div></div><button class="btn-lib" onclick="liberarSlot(${sid},'${dia}','${h}',event)">✕ liberar</button>`;
+    }else{
+      cls+=' marcavel';
+      body=`<div class="hint-static">Toque para marcar</div>`;
+    }
+    const click=!conf?`onclick="abrirModal(${sid},'${dia}','${h}')"` :'';
+    html+=`<div class="slot-row${agora?' agora':''}"><div class="hora-lbl">${h}</div><div class="${cls}" ${click}>${body}</div></div>`;
+  });
+  el.innerHTML=html;
+  updateLiveStatus();
+}
+function updateLiveStatus(){
+  [1,2].forEach(sid=>{
+    const h=new Date().getHours()+'H',conf=getAt(sid,getDiaSemana(),h);
+    const dot=document.getElementById('ldot'+sid),txt=document.getElementById('ltxt'+sid);
+    if(conf){dot.classList.add('red');txt.textContent=conf+' atendendo';txt.style.color=profCor(conf);}
+    else{dot.classList.remove('red');txt.textContent='Livre';txt.style.color='';}
+  });
+}
+
+let pend={};
+function abrirModal(sid,dia,hora){
+  pend={sid,dia,hora,prof:null};
+  document.getElementById('m-sala').textContent='Sala 0'+(sid===1?'1':'3');
+  document.getElementById('m-dia').textContent=DLBL[dia];
+  document.getElementById('m-hora').textContent=hora;
+  const grid=document.getElementById('profModalGrid');
+  grid.innerHTML='';
+  STATE.profissionais.forEach(p=>{
+    const b=document.createElement('button');
+    b.className='prof-btn';b.textContent=p.nome;
+    b.onclick=()=>{
+      document.querySelectorAll('.prof-btn').forEach(x=>{x.classList.remove('sel');x.style.background='';});
+      b.classList.add('sel');b.style.background=profCor(p.id);
+      pend.prof=p.id;document.getElementById('btnOk').classList.add('on');
+    };
+    grid.appendChild(b);
+  });
+  document.getElementById('btnOk').classList.remove('on');
+  document.getElementById('overlay').classList.add('open');
+}
+function fecharModal(){document.getElementById('overlay').classList.remove('open');pend={};}
+function confirmarAt(){
+  if(!pend.prof)return;
+  setAt(pend.sid,pend.dia,pend.hora,pend.prof);
+  fecharModal();
+  toast(pend.prof+' — Sala 0'+(pend.sid===1?'1':'3')+' '+pend.hora);
+}
+function liberarSlot(sid,dia,hora,ev){
+  ev.stopPropagation();delAt(sid,dia,hora);
+  toast('Sala 0'+(sid===1?'1':'3')+' '+hora+' liberada');
+}
+document.getElementById('overlay').addEventListener('click',e=>{if(e.target===document.getElementById('overlay'))fecharModal();});
+
+// ABA 3
+function renderSettings(){
+  const el=document.getElementById('profList');
+  let html='';
+  STATE.profissionais.forEach((p,i)=>{
+    html+=`<div class="prof-item" id="pi-${i}"><div class="prof-item-dot" style="background:${p.cor}" onclick="editCor(${i})"></div><div class="prof-item-name"><span class="show-name">${p.nome}</span><input class="edit-inline" type="text" value="${p.nome}" onblur="salvarNome(${i},this.value)" onkeydown="if(event.key==='Enter')this.blur()"></div><div class="prof-item-actions"><button class="btn-icon" onclick="toggleEdit(${i})">✏</button><button class="btn-icon" onclick="removeProf(${i})">✕</button></div></div>`;
+  });
+  el.innerHTML=html;
+}
+function toggleEdit(i){const it=document.getElementById('pi-'+i);it.classList.toggle('editing');if(it.classList.contains('editing')){it.querySelector('input').focus();it.querySelector('input').select();}}
+function salvarNome(i,n){
+  n=n.trim();if(!n)return;
+  const old=STATE.profissionais[i].nome;
+  STATE.profissionais[i].nome=n;STATE.profissionais[i].id=n;
+  [1,2].forEach(sid=>{HORAS.forEach(h=>{DIAS.forEach(d=>{const a=STATE.grade[sid][h][d];if(a){const x=a.indexOf(old);if(x>=0)a[x]=n;}});});});
+  renderSettings();toast(old+' → '+n);
+}
+function editCor(i){
+  const it=document.getElementById('pi-'+i);
+  if(it.querySelector('.color-picker-row')){it.querySelector('.color-picker-row').remove();return;}
+  const row=document.createElement('div');row.className='color-picker-row';
+  PALETTE.forEach(c=>{const sw=document.createElement('div');sw.className='color-swatch'+(STATE.profissionais[i].cor===c?' selected':'');sw.style.background=c;sw.onclick=()=>{STATE.profissionais[i].cor=c;renderSettings();toast('Cor atualizada!');};row.appendChild(sw);});
+  it.appendChild(row);
+}
+function addProf(){
+  const nome=prompt('Nome do novo profissional:');if(!nome||!nome.trim())return;
+  const n=nome.trim().toUpperCase();
+  const cor=PALETTE.find(c=>!STATE.profissionais.map(p=>p.cor).includes(c))||PALETTE[0];
+  STATE.profissionais.push({id:n,nome:n,cor});
+  renderSettings();toast(n+' adicionado!');
+}
+function removeProf(i){
+  const nome=STATE.profissionais[i].nome;
+  if(!confirm('Remover "'+nome+'"?'))return;
+  [1,2].forEach(sid=>{HORAS.forEach(h=>{DIAS.forEach(d=>{const a=STATE.grade[sid][h][d];if(a){const x=a.indexOf(nome);if(x>=0)a.splice(x,1);}});});});
+  STATE.profissionais.splice(i,1);renderSettings();toast(nome+' removido');
+}
+function limparAtendimentos(){
+  if(!confirm('Limpar todos os atendimentos?'))return;
+  db.ref('atendimentos').remove();toast('Atendimentos limpos');
+}
+function renderGradeEditor(){
+  const sid=parseInt(document.getElementById('gradeSelectSala').value);
+  const dia=document.getElementById('gradeSelectDia').value;
+  const el=document.getElementById('gradeEditor');
+  let html='<div class="grade-section-box">';
+  HORAS.forEach(h=>{
+    const profs=STATE.grade[sid][h][dia]||[];
+    const tags=profs.map(pid=>`<span class="grade-prof-tag" style="background:${lighten(profCor(pid))};color:${profCor(pid)};border:1px solid ${borderOf(profCor(pid))}">${getProf(pid)?.nome||pid}<button onclick="removerDaGrade(${sid},'${dia}','${h}','${pid}')">✕</button></span>`).join('');
+    html+=`<div class="grade-slot-row"><div class="grade-slot-hora">${h}</div><div class="grade-slot-profs">${tags}<button class="grade-add-btn" onclick="adicionarNaGrade(${sid},'${dia}','${h}')">+ add</button></div></div>`;
+  });
+  html+='</div>';el.innerHTML=html;
+}
+function removerDaGrade(sid,dia,hora,pid){
+  const a=STATE.grade[sid][hora][dia];if(!a)return;
+  const x=a.indexOf(pid);if(x>=0)a.splice(x,1);
+  renderGradeEditor();toast('Removido da grade');
+}
+function adicionarNaGrade(sid,dia,hora){
+  const arr=STATE.grade[sid][hora][dia]||[];
+  const disp=STATE.profissionais.filter(p=>!arr.includes(p.id));
+  if(!disp.length){toast('Todos já estão neste horário');return;}
+  const escolha=prompt('Adicionar em '+hora+' ('+dia+'):\n'+disp.map((p,i)=>(i+1)+'. '+p.nome).join('\n')+'\n\nDigite o número:');
+  if(!escolha)return;
+  const num=parseInt(escolha);
+  let prof=!isNaN(num)&&num>=1&&num<=disp.length?disp[num-1]:disp.find(p=>p.nome.toLowerCase()===escolha.trim().toLowerCase());
+  if(!prof){toast('Não encontrado');return;}
+  if(!STATE.grade[sid][hora][dia])STATE.grade[sid][hora][dia]=[];
+  STATE.grade[sid][hora][dia].push(prof.id);
+  renderGradeEditor();toast(prof.nome+' adicionado');
+}
+
+function tick(){const n=new Date();document.getElementById('clock').textContent=n.getHours().toString().padStart(2,'0')+':'+n.getMinutes().toString().padStart(2,'0');}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
+
+tick();
+setInterval(tick,15000);
+setInterval(updateLiveStatus,30000);
+</script>
+</body>
+</html>
