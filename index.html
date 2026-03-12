@@ -322,15 +322,41 @@ const DEFAULT_GRADE={
 
 let STATE={profissionais:JSON.parse(JSON.stringify(DEFAULT_PROFS)),grade:JSON.parse(JSON.stringify(DEFAULT_GRADE))};
 let ATEND={};
-let fbReady=false;
+let fbReady=0; // conta quantos listeners já dispararam (precisamos de 3: atend + profs + grade)
 
-// Firebase sync
+// ── Firebase: atendimentos ──
 db.ref('atendimentos').on('value',snap=>{
   ATEND=snap.val()||{};
-  setSyncStatus('');
-  if(!fbReady){fbReady=true;renderAvail();}
-  else reRenderAll();
+  fbReady|=1; tryInit();
+  reRenderAll();
 },()=>setSyncStatus('off'));
+
+// ── Firebase: profissionais ──
+db.ref('profissionais').on('value',snap=>{
+  const val=snap.val();
+  if(val) STATE.profissionais=val;
+  else db.ref('profissionais').set(DEFAULT_PROFS); // primeira vez: sobe o default
+  fbReady|=2; tryInit();
+  reRenderAll();
+  if(document.getElementById('page-configuracoes').classList.contains('active'))renderSettings();
+});
+
+// ── Firebase: grade ──
+db.ref('grade').on('value',snap=>{
+  const val=snap.val();
+  if(val) STATE.grade=val;
+  else db.ref('grade').set(DEFAULT_GRADE); // primeira vez: sobe o default
+  fbReady|=4; tryInit();
+  reRenderAll();
+  if(document.getElementById('page-configuracoes').classList.contains('active'))renderGradeEditor();
+});
+
+function tryInit(){
+  if(fbReady===7){ // todos 3 prontos (1|2|4)
+    setSyncStatus('');
+    renderAvail();
+  }
+}
 
 db.ref('.info/connected').on('value',snap=>setSyncStatus(snap.val()?'':'off'));
 
@@ -341,6 +367,10 @@ function setSyncStatus(s){
 function getAt(sid,dia,h){return ATEND?.[sid]?.[dia]?.[h]||null;}
 function setAt(sid,dia,h,p){db.ref('atendimentos/'+sid+'/'+dia+'/'+h).set(p);}
 function delAt(sid,dia,h){db.ref('atendimentos/'+sid+'/'+dia+'/'+h).remove();}
+
+// Salva profissionais e grade no Firebase
+function saveProfs(){db.ref('profissionais').set(STATE.profissionais);}
+function saveGrade(){db.ref('grade').set(STATE.grade);}
 
 function reRenderAll(){
   if(document.getElementById('page-atendimento').classList.contains('active'))renderAttend();
@@ -493,13 +523,14 @@ function salvarNome(i,n){
   const old=STATE.profissionais[i].nome;
   STATE.profissionais[i].nome=n;STATE.profissionais[i].id=n;
   [1,2].forEach(sid=>{HORAS.forEach(h=>{DIAS.forEach(d=>{const a=STATE.grade[sid][h][d];if(a){const x=a.indexOf(old);if(x>=0)a[x]=n;}});});});
-  renderSettings();toast(old+' → '+n);
+  saveProfs();saveGrade();
+  toast(old+' → '+n);
 }
 function editCor(i){
   const it=document.getElementById('pi-'+i);
   if(it.querySelector('.color-picker-row')){it.querySelector('.color-picker-row').remove();return;}
   const row=document.createElement('div');row.className='color-picker-row';
-  PALETTE.forEach(c=>{const sw=document.createElement('div');sw.className='color-swatch'+(STATE.profissionais[i].cor===c?' selected':'');sw.style.background=c;sw.onclick=()=>{STATE.profissionais[i].cor=c;renderSettings();toast('Cor atualizada!');};row.appendChild(sw);});
+  PALETTE.forEach(c=>{const sw=document.createElement('div');sw.className='color-swatch'+(STATE.profissionais[i].cor===c?' selected':'');sw.style.background=c;sw.onclick=()=>{STATE.profissionais[i].cor=c;saveProfs();toast('Cor atualizada!');};row.appendChild(sw);});
   it.appendChild(row);
 }
 function addProf(){
@@ -507,13 +538,14 @@ function addProf(){
   const n=nome.trim().toUpperCase();
   const cor=PALETTE.find(c=>!STATE.profissionais.map(p=>p.cor).includes(c))||PALETTE[0];
   STATE.profissionais.push({id:n,nome:n,cor});
-  renderSettings();toast(n+' adicionado!');
+  saveProfs();toast(n+' adicionado!');
 }
 function removeProf(i){
   const nome=STATE.profissionais[i].nome;
   if(!confirm('Remover "'+nome+'"?'))return;
   [1,2].forEach(sid=>{HORAS.forEach(h=>{DIAS.forEach(d=>{const a=STATE.grade[sid][h][d];if(a){const x=a.indexOf(nome);if(x>=0)a.splice(x,1);}});});});
-  STATE.profissionais.splice(i,1);renderSettings();toast(nome+' removido');
+  STATE.profissionais.splice(i,1);
+  saveProfs();saveGrade();toast(nome+' removido');
 }
 function limparAtendimentos(){
   if(!confirm('Limpar todos os atendimentos?'))return;
@@ -534,7 +566,7 @@ function renderGradeEditor(){
 function removerDaGrade(sid,dia,hora,pid){
   const a=STATE.grade[sid][hora][dia];if(!a)return;
   const x=a.indexOf(pid);if(x>=0)a.splice(x,1);
-  renderGradeEditor();toast('Removido da grade');
+  saveGrade();toast('Removido da grade');
 }
 function adicionarNaGrade(sid,dia,hora){
   const arr=STATE.grade[sid][hora][dia]||[];
@@ -547,7 +579,7 @@ function adicionarNaGrade(sid,dia,hora){
   if(!prof){toast('Não encontrado');return;}
   if(!STATE.grade[sid][hora][dia])STATE.grade[sid][hora][dia]=[];
   STATE.grade[sid][hora][dia].push(prof.id);
-  renderGradeEditor();toast(prof.nome+' adicionado');
+  saveGrade();toast(prof.nome+' adicionado');
 }
 
 function tick(){const n=new Date();document.getElementById('clock').textContent=n.getHours().toString().padStart(2,'0')+':'+n.getMinutes().toString().padStart(2,'0');}
